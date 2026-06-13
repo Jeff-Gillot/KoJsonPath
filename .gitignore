@@ -1,0 +1,17 @@
+# Ignore Gradle project-specific cache directory
+.gradle
+
+# Ignore Gradle build output directory
+build
+
+# Ignore Kotlin plugin data
+.kotlin
+
+# Ignore IntelliJ IDEA directory
+.idea
+
+# Ignore bundle artifacts
+bundle.zip
+
+# Ignore git worktrees
+.worktrees
