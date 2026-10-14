@@ -6,44 +6,44 @@ public fun JsonElement.stringAt(jsonPointer: String): String = stringAt(JsonPoin
 
 public fun JsonElement.stringAt(jsonPointer: JsonPointer): String =
     when (val jsonElement = jsonElementAt(jsonPointer)) {
-        is JsonPrimitive -> jsonElement.content
-        else -> throw JsonPointerError(jsonPointer, jsonPointer.segments.lastIndex) { "'$it' is not a string, it is ${jsonElement.niceType}" }
+        is JsonPrimitive if (jsonElement !is JsonNull) -> jsonElement.content
+        else -> throw typeMismatch(jsonPointer, "is not a string, it is ${jsonElement.niceType}")
     }
 
 public fun JsonElement.intAt(jsonPointer: String): Int = intAt(JsonPointer(jsonPointer))
 
 public fun JsonElement.intAt(jsonPointer: JsonPointer): Int =
     when (val jsonElement = jsonElementAt(jsonPointer)) {
-        is JsonPrimitive if (jsonElement.content.toIntOrNull() != null) -> jsonElement.content.toInt()
-        is JsonPrimitive -> throw JsonPointerError(jsonPointer, jsonPointer.segments.lastIndex) { "'$it' is not a valid integer" }
-        else -> throw JsonPointerError(jsonPointer, jsonPointer.segments.lastIndex) { "'$it' is not an integer, it is ${jsonElement.niceType}" }
+        is JsonPrimitive if (jsonElement !is JsonNull && jsonElement.content.toIntOrNull() != null) -> jsonElement.content.toInt()
+        is JsonPrimitive if (jsonElement !is JsonNull) -> throw typeMismatch(jsonPointer, "is not a valid integer")
+        else -> throw typeMismatch(jsonPointer, "is not an integer, it is ${jsonElement.niceType}")
     }
 
 public fun JsonElement.longAt(jsonPointer: String): Long = longAt(JsonPointer(jsonPointer))
 
 public fun JsonElement.longAt(jsonPointer: JsonPointer): Long =
     when (val jsonElement = jsonElementAt(jsonPointer)) {
-        is JsonPrimitive if (jsonElement.content.toLongOrNull() != null) -> jsonElement.content.toLong()
-        is JsonPrimitive -> throw JsonPointerError(jsonPointer, jsonPointer.segments.lastIndex) { "'$it' is not a valid long" }
-        else -> throw JsonPointerError(jsonPointer, jsonPointer.segments.lastIndex) { "'$it' is not a long, it is ${jsonElement.niceType}" }
+        is JsonPrimitive if (jsonElement !is JsonNull && jsonElement.content.toLongOrNull() != null) -> jsonElement.content.toLong()
+        is JsonPrimitive if (jsonElement !is JsonNull) -> throw typeMismatch(jsonPointer, "is not a valid long")
+        else -> throw typeMismatch(jsonPointer, "is not a long, it is ${jsonElement.niceType}")
     }
 
 public fun JsonElement.doubleAt(jsonPointer: String): Double = doubleAt(JsonPointer(jsonPointer))
 
 public fun JsonElement.doubleAt(jsonPointer: JsonPointer): Double =
     when (val jsonElement = jsonElementAt(jsonPointer)) {
-        is JsonPrimitive if (jsonElement.content.toDoubleOrNull() != null) -> jsonElement.content.toDouble()
-        is JsonPrimitive -> throw JsonPointerError(jsonPointer, jsonPointer.segments.lastIndex) { "'$it' is not a valid number" }
-        else -> throw JsonPointerError(jsonPointer, jsonPointer.segments.lastIndex) { "'$it' is not a number, it is ${jsonElement.niceType}" }
+        is JsonPrimitive if (jsonElement !is JsonNull && jsonElement.content.toDoubleOrNull() != null) -> jsonElement.content.toDouble()
+        is JsonPrimitive if (jsonElement !is JsonNull) -> throw typeMismatch(jsonPointer, "is not a valid number")
+        else -> throw typeMismatch(jsonPointer, "is not a number, it is ${jsonElement.niceType}")
     }
 
 public fun JsonElement.booleanAt(jsonPointer: String): Boolean = booleanAt(JsonPointer(jsonPointer))
 
 public fun JsonElement.booleanAt(jsonPointer: JsonPointer): Boolean =
     when (val jsonElement = jsonElementAt(jsonPointer)) {
-        is JsonPrimitive if (jsonElement.content.toBooleanStrictOrNull() != null) -> jsonElement.content.toBooleanStrict()
-        is JsonPrimitive -> throw JsonPointerError(jsonPointer, jsonPointer.segments.lastIndex) { "'$it' is not a valid boolean" }
-        else -> throw JsonPointerError(jsonPointer, jsonPointer.segments.lastIndex) { "'$it' is not a boolean, it is ${jsonElement.niceType}" }
+        is JsonPrimitive if (jsonElement !is JsonNull && jsonElement.content.toBooleanStrictOrNull() != null) -> jsonElement.content.toBooleanStrict()
+        is JsonPrimitive if (jsonElement !is JsonNull) -> throw typeMismatch(jsonPointer, "is not a valid boolean")
+        else -> throw typeMismatch(jsonPointer, "is not a boolean, it is ${jsonElement.niceType}")
     }
 
 public fun JsonElement.jsonObjectAt(jsonPointer: String): JsonObject = jsonObjectAt(JsonPointer(jsonPointer))
@@ -51,7 +51,7 @@ public fun JsonElement.jsonObjectAt(jsonPointer: String): JsonObject = jsonObjec
 public fun JsonElement.jsonObjectAt(jsonPointer: JsonPointer): JsonObject =
     when (val jsonElement = jsonElementAt(jsonPointer)) {
         is JsonObject -> jsonElement
-        else -> throw JsonPointerError(jsonPointer, jsonPointer.segments.lastIndex) { "'$it' is not an object, it is ${jsonElement.niceType}" }
+        else -> throw typeMismatch(jsonPointer, "is not an object, it is ${jsonElement.niceType}")
     }
 
 public fun JsonElement.jsonArrayAt(jsonPointer: String): JsonArray = jsonArrayAt(JsonPointer(jsonPointer))
@@ -59,7 +59,7 @@ public fun JsonElement.jsonArrayAt(jsonPointer: String): JsonArray = jsonArrayAt
 public fun JsonElement.jsonArrayAt(jsonPointer: JsonPointer): JsonArray =
     when (val jsonElement = jsonElementAt(jsonPointer)) {
         is JsonArray -> jsonElement
-        else -> throw JsonPointerError(jsonPointer, jsonPointer.segments.lastIndex) { "'$it' is not an array, it is ${jsonElement.niceType}" }
+        else -> throw typeMismatch(jsonPointer, "is not an array, it is ${jsonElement.niceType}")
     }
 
 public fun JsonElement.jsonElementAt(jsonPointer: String): JsonElement = jsonElementAt(JsonPointer(jsonPointer))
@@ -68,17 +68,16 @@ public fun JsonElement.jsonElementAt(jsonPointer: JsonPointer): JsonElement =
     jsonPointer.segments.fold(this) { jsonElement, segment ->
         when (jsonElement) {
             is JsonObject -> jsonElement[segment.decoded] ?: throw JsonPointerError(jsonPointer, segment.pointerIndex) { "key '$it' not found in parent" }
-            is JsonArray if (segment.isIndex && segment.asIndex in jsonElement.indices) -> jsonElement[segment.asIndex]
-            is JsonArray if (segment.isIndex) -> throw JsonPointerError(jsonPointer, segment.pointerIndex) { "index $it is out of bounds - array has ${jsonElement.size} element${if (jsonElement.size > 1) "s" else "" }" }
+            is JsonArray if (segment.asIndex != null && segment.asIndex in jsonElement.indices) -> jsonElement[segment.asIndex]
+            is JsonArray if (segment.isIndex) -> throw JsonPointerError(jsonPointer, segment.pointerIndex) { "index $it is out of bounds - array has ${jsonElement.size} element${if (jsonElement.size != 1) "s" else ""}" }
             is JsonArray -> throw JsonPointerError(jsonPointer, segment.pointerIndex) { "expected an array index, got '$it'" }
             is JsonPrimitive -> throw JsonPointerError(jsonPointer, segment.pointerIndex - 1) { "'$it' is ${jsonElement.niceType}, not an object or array" }
-            JsonNull -> throw JsonPointerError(jsonPointer, segment.pointerIndex) { "'$it' is null, not an object or array" }
         }
     }
 
 public fun JsonElement.stringOrNullAt(jsonPointer: String): String? = stringOrNullAt(JsonPointer(jsonPointer))
 
-public fun JsonElement.stringOrNullAt(jsonPointer: JsonPointer): String? = (jsonElementOrNullAt(jsonPointer) as? JsonPrimitive)?.content
+public fun JsonElement.stringOrNullAt(jsonPointer: JsonPointer): String? = (jsonElementOrNullAt(jsonPointer) as? JsonPrimitive)?.takeIf { it !is JsonNull }?.content
 
 public fun JsonElement.intOrNullAt(jsonPointer: String): Int? = intOrNullAt(JsonPointer(jsonPointer))
 
@@ -109,11 +108,10 @@ public fun JsonElement.jsonElementOrNullAt(jsonPointer: String): JsonElement? = 
 public fun JsonElement.jsonElementOrNullAt(jsonPointer: JsonPointer): JsonElement? =
     jsonPointer.segments.fold(this as JsonElement?) { jsonElement, segment ->
         val decodedPart = segment.decoded
-        val pathIndex = segment.pointerIndex
 
         when (jsonElement) {
             is JsonObject -> jsonElement[decodedPart]
-            is JsonArray if (segment.isIndex && segment.asIndex in jsonElement.indices) -> jsonElement[segment.asIndex]
+            is JsonArray if (segment.asIndex != null && segment.asIndex in jsonElement.indices) -> jsonElement[segment.asIndex]
             else -> null
         }
     }
@@ -142,7 +140,7 @@ public data class JsonPointerSegment(
     val pointerIndex: Int,
 ) {
     val isIndex: Boolean = raw.isNotEmpty() && (raw == "0" || (raw.first() != '0' && raw.all { it.isDigit() }))
-    val asIndex: Int by lazy { raw.toInt() }
+    val asIndex: Int? = if (isIndex) raw.toIntOrNull() else null
     val decoded: String = raw.replace("~1", "/").replace("~0", "~")
 }
 
@@ -153,6 +151,11 @@ public class JsonPointerError internal constructor(
 ) : RuntimeException(
         buildString {
             appendLine("Failed to resolve JSON pointer:")
+            if (jsonPointer.segments.isEmpty()) {
+                appendLine("\"\"")
+                append("| ${messageProvider("")}")
+                return@buildString
+            }
             appendLine(jsonPointer)
             jsonPointer.segments.take(index + 1).forEach { segment ->
                 if (segment.pointerIndex == index) {
@@ -166,6 +169,14 @@ public class JsonPointerError internal constructor(
             }
         },
     )
+
+private fun typeMismatch(
+    jsonPointer: JsonPointer,
+    problem: String,
+): JsonPointerError {
+    val subject = jsonPointer.segments.lastOrNull()?.let { "'${it.decoded}'" } ?: "the document root"
+    return JsonPointerError(jsonPointer, jsonPointer.segments.lastIndex) { "$subject $problem" }
+}
 
 private val JsonElement.niceType: String get() =
     when (this) {

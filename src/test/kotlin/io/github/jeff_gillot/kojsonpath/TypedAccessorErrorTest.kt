@@ -99,4 +99,18 @@ class TypedAccessorErrorTest {
     fun acceptsJsonPointerOverload() {
         assertEquals(42, testJson.intAt(JsonPointer("/values/age")))
     }
+
+    @Test
+    fun typeMismatchAtRootPointerDescribesTheDocumentRoot() {
+        val exception = assertFailsWith<JsonPointerError> { testJson.stringAt("") }
+
+        val expectedMessage =
+            """
+            Failed to resolve JSON pointer:
+            ""
+            | the document root is not a string, it is an object
+            """.trimIndent()
+
+        assertEquals(expectedMessage, exception.message)
+    }
 }
