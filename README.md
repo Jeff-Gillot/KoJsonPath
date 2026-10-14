@@ -43,7 +43,7 @@ repositories {
 }
 
 dependencies {
-    implementation("io.github.jeff-gillot:kojsonpath:0.1.0")
+    implementation("io.github.jeff-gillot:kojsonpath:0.2.0")
 }
 ```
 
@@ -246,6 +246,12 @@ Failed to resolve JSON pointer:
 
 The caret is aligned using the raw (still-escaped) segment text, so it stays
 correct even for keys that contain `~0` / `~1` escapes.
+
+---
+
+## Changelog
+
+See [CHANGELOG.md](CHANGELOG.md) for the changes in each release.
 
 ---
 
